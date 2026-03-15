@@ -1,0 +1,24 @@
+# Ambiente Virtual
+venv/
+env/
+
+/storage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+static/
+
+# IDEs e OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
