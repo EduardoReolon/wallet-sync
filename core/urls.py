@@ -19,6 +19,7 @@ from django.urls import path, include, reverse_lazy
 from django.views.generic import CreateView
 from expenses.views import home, ler_nota
 from accounts.forms import CustomUserCreationForm
+from django.views.generic import TemplateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -33,4 +34,5 @@ urlpatterns = [
 
     path('', home, name='home'),
     path('ler-nota/', ler_nota, name='ler_nota'),
+    path('sw.js', TemplateView.as_view(template_name='sw.js', content_type='application/javascript')),
 ]

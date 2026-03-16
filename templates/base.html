@@ -7,9 +7,10 @@
     <title>Controle de Gastos</title>
     
     <link rel="manifest" href="{% static 'manifest.json' %}">
+    <link rel="apple-touch-icon" href="/static/192.png">
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register("{% static 'sw.js' %}");
+        navigator.serviceWorker.register("/sw.js");
       }
     </script>
 </head>

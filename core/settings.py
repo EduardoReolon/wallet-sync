@@ -33,6 +33,11 @@ if ENVIRONMENT == 'PROD':
 else:
     ALLOWED_HOSTS = ['*']
 
+# Configurações de CSRF para HTTPS e o domínio
+CSRF_TRUSTED_ORIGINS = [
+    'https://wallet.sigmaiaconsultoria.com.br',
+]
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Carrega as variáveis do arquivo .env
