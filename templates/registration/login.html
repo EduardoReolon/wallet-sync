@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Login</title></head>
+<body style="font-family: sans-serif; max-width: 300px; margin: 50px auto;">
+    <h2>Entrar</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" style="width: 100%; padding: 10px; cursor: pointer;">Acessar</button>
+    </form>
+    <a href="{% url 'register' %}">Criar Conta</a>
+</body>
+</html>

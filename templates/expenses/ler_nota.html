@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Ler Nota Fiscal</h2>
+
+    {% if messages %}
+        <ul style="color: blue; font-weight: bold;">
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        function onScanSuccess(decodedText, decodedResult) {
+            // Preenche o input com o link lido
+            document.querySelector('input[name="url_nota"]').value = decodedText;
+            
+            // Para a câmera
+            html5QrcodeScanner.clear();
+            
+            // Envia o formulário automaticamente
+            document.querySelector('form').submit();
+        }
+
+        // Inicia o leitor
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: 250 }
+        );
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+
+    <form method="post">
+        {% csrf_token %}
+        <label>Link do QR Code:</label><br>
+        <input type="text" name="url_nota" style="width: 100%; padding: 8px;" required>
+        <button type="submit" style="margin-top: 10px;">Extrair Dados</button>
+    </form>
+
+    {% if dados %}
+        <h3>Resultado:</h3>
+        <p><strong>Estabelecimento:</strong> {{ dados.estabelecimento }}</p>
+        <p><small>Chave: {{ dados.chave_acesso }}</small></p>
+        <ul>
+            {% for item in dados.itens %}
+                <li>{{ item.quantidade }}x {{ item.nome }} - R$ {{ item.preco_unitario }} (Total: R$ {{ item.preco_total }})</li>
+            {% empty %}
+                <li>Nenhum item encontrado. (Pode ser que a estrutura do HTML seja diferente ou fomos bloqueados).</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+{% endblock %}

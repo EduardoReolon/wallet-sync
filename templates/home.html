@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Bem-vindo, {{ user.email }}!</h2>
+    <p>Seu código de convite: {{ user.invite_code }}</p>
+{% endblock %}

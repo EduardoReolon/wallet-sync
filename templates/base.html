@@ -1,0 +1,28 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos</title>
+    
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register("{% static 'sw.js' %}");
+      }
+    </script>
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+
+    <nav style="margin-bottom: 20px;">
+        <a href="{% url 'home' %}">Início</a> | 
+        <a href="{% url 'ler_nota' %}">Ler Nota</a> | 
+        <a href="{% url 'logout' %}">Sair</a>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+
+</body>
+</html>

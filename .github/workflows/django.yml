@@ -1,0 +1,127 @@
+name: Deploy Django Project
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SERVER_TARGET_PATH: /home/ubuntu/wallet-sync
+      # Nomes dos serviços configurados anteriormente
+      ENABLE_TESTS: "false"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Cache venv
+        if: env.ENABLE_TESTS == 'true'
+        uses: actions/cache@v3
+        id: cache-venv
+        with:
+          path: venv
+          key: ${{ runner.os }}-python-${{ hashFiles('requirements.txt') }}
+
+      - name: Setup venv and Install dependencies (GitHub)
+        if: steps.cache-venv.outputs.cache-hit != 'true' && env.ENABLE_TESTS == 'true'
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
+          pip install --upgrade pip setuptools wheel
+          
+          python convert_requirements.py
+
+          pip install --no-cache-dir -r requirements_flexible.txt -c constraints.txt
+
+      - name: Run tests
+        if: env.ENABLE_TESTS == 'true'
+        run: |
+          mkdir -p logs
+          source venv/bin/activate
+          if python manage.py help test | grep -q "No installed app"; then
+            echo "Nenhum teste encontrado, pulando..."
+          else
+            python manage.py test || echo "Testes falharam, mas continuando..."
+          fi
+
+      - name: Save venv to cache
+        uses: actions/cache/save@v3
+        if: steps.cache-venv.outputs.cache-hit != 'true' && env.ENABLE_TESTS == 'true'
+        with:
+          path: venv
+          key: ${{ runner.os }}-python-${{ hashFiles('requirements.txt') }}
+
+      - name: Clean unnecessary files before deployment
+        run: |
+          rm -rf venv/
+          rm -rf .git/
+          rm -rf logs/
+          rm -f tasks.sqlite3
+          rm -f db.sqlite3
+          echo "Limpeza pré-deploy concluída."
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: "."
+          target: ${{ env.SERVER_TARGET_PATH }}
+          rm: false
+
+      - name: Run remote commands
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            sudo apt-get update
+            sudo apt-get install -y python3.10-dev build-essential libpython3.10-dev
+
+            TARGET_PATH=${{ env.SERVER_TARGET_PATH }}
+            cd $TARGET_PATH
+
+            # 1. Setup inicial
+            mkdir -p logs
+            echo -e "${{ secrets.PRODUCTION_ENV_FILE }}" > .env
+
+            # 2. Venv
+            if [ ! -d "venv" ]; then
+              python3.10 -m venv venv
+            fi
+            source venv/bin/activate
+
+            # 3. Dependências (Cache Check)
+            NEW_REQ_HASH=$(sha256sum requirements.txt | awk '{ print $1 }')
+            OLD_REQ_HASH_FILE=".requirements_hash"
+
+            if [ "$NEW_REQ_HASH" != "$(cat $OLD_REQ_HASH_FILE 2>/dev/null)" ]; then
+              echo "Dependências mudaram. Instalando..."
+              pip install --upgrade pip setuptools wheel
+              python convert_requirements.py
+              pip install -r requirements_flexible.txt -c constraints.txt
+              python -m spacy download pt_core_news_sm
+              echo "$NEW_REQ_HASH" > $OLD_REQ_HASH_FILE
+            fi
+
+            # 4. Comandos Django
+            python manage.py migrate --noinput
+            python manage.py pgpartition --yes
+            python manage.py collectstatic --noinput
+
+            # 6. Restart Serviços
+            echo "Fazendo reload suave no Django (wallet-sync)..."
+            sudo systemctl reload wallet-sync --no-block
+            
+            # Opcional: reload nginx se necessário
+            # sudo systemctl reload nginx

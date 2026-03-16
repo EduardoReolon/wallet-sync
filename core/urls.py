@@ -15,8 +15,22 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include, reverse_lazy
+from django.views.generic import CreateView
+from expenses.views import home, ler_nota
+from accounts.forms import CustomUserCreationForm
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('contas/', include('django.contrib.auth.urls')),
+    
+    # Rota de registro (nova)
+    path('contas/registrar/', CreateView.as_view(
+        template_name='registration/register.html',
+        form_class=CustomUserCreationForm,
+        success_url=reverse_lazy('login')
+    ), name='register'),
+
+    path('', home, name='home'),
+    path('ler-nota/', ler_nota, name='ler_nota'),
 ]
