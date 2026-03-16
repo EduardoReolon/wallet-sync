@@ -2,6 +2,8 @@
 venv/
 env/
 
+*_flexible.txt
+
 /storage/
 
 # Python
