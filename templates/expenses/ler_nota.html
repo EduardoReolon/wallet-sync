@@ -3,54 +3,87 @@
 {% block content %}
     <h2>Ler Nota Fiscal</h2>
 
-    {% if messages %}
-        <ul style="color: blue; font-weight: bold;">
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+    <div id="scanner-container">
+        <div id="reader" style="width: 100%; max-width: 500px;"></div>
+    </div>
+    
+    <p id="resultado" style="margin-top: 20px; font-weight: bold; word-break: break-all;"></p>
 
-    <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+    <div id="detalhes-nota" style="display: none; border: 1px solid #ccc; padding: 15px; max-width: 500px; border-radius: 8px;">
+        <h3 id="estab-nome" style="margin-top: 0;"></h3>
+        <p id="estab-data" style="color: gray; font-size: 0.9em;"></p>
+        <hr>
+        <h4>Itens:</h4>
+        <ul id="lista-itens" style="padding-left: 20px; font-size: 0.9em;"></ul>
+        
+        <button onclick="lerOutraNota()" style="margin-top: 15px; padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%;">
+            Ler Outra Nota
+        </button>
+    </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
+    
     <script>
-        function onScanSuccess(decodedText, decodedResult) {
-            // Preenche o input com o link lido
-            document.querySelector('input[name="url_nota"]').value = decodedText;
+        const csrfToken = "{{ csrf_token }}";
+        const resultadoEl = document.getElementById('resultado');
+        const detalhesEl = document.getElementById('detalhes-nota');
+        const scannerContainer = document.getElementById('scanner-container');
+
+        let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} });
+
+        function exibirDados(dados) {
+            document.getElementById('estab-nome').innerText = dados.estabelecimento;
+            document.getElementById('estab-data').innerText = "Emitido em: " + (dados.data_emissao_str || "Desconhecido");
             
-            // Para a câmera
-            html5QrcodeScanner.clear();
+            const lista = document.getElementById('lista-itens');
+            lista.innerHTML = '';
             
-            // Envia o formulário automaticamente
-            document.querySelector('form').submit();
+            dados.itens.forEach(item => {
+                let li = document.createElement('li');
+                li.innerText = `${item.quantidade}x ${item.nome} - R$ ${item.preco_total}`;
+                lista.appendChild(li);
+            });
+
+            scannerContainer.style.display = 'none'; // Esconde a câmera
+            detalhesEl.style.display = 'block';      // Mostra os dados
         }
 
-        // Inicia o leitor
-        let html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", { fps: 10, qrbox: 250 }
-        );
-        html5QrcodeScanner.render(onScanSuccess);
+        function lerOutraNota() {
+            detalhesEl.style.display = 'none';
+            scannerContainer.style.display = 'block';
+            resultadoEl.innerText = '';
+            scanner.render(onScanSuccess); // Reinicia a câmera
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            resultadoEl.innerText = "Processando link na SEFAZ...";
+            resultadoEl.style.color = "blue";
+            
+            scanner.clear(); // Para a câmera
+            
+            fetch("{% url 'ler_nota' %}", { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ url: decodedText })
+            })
+            .then(res => res.json())
+            .then(data => {
+                resultadoEl.innerText = data.mensagem;
+                resultadoEl.style.color = data.sucesso ? "green" : "#ff8c00"; // Verde se sucesso, Laranja se já existir
+                
+                if (data.dados) {
+                    exibirDados(data.dados);
+                }
+            })
+            .catch(err => {
+                resultadoEl.innerText = "Erro ao se comunicar com o servidor.";
+                resultadoEl.style.color = "red";
+            });
+        }
+
+        scanner.render(onScanSuccess);
     </script>
-
-    <form method="post">
-        {% csrf_token %}
-        <label>Link do QR Code:</label><br>
-        <input type="text" name="url_nota" style="width: 100%; padding: 8px;" required>
-        <button type="submit" style="margin-top: 10px;">Extrair Dados</button>
-    </form>
-
-    {% if dados %}
-        <h3>Resultado:</h3>
-        <p><strong>Estabelecimento:</strong> {{ dados.estabelecimento }}</p>
-        <p><small>Chave: {{ dados.chave_acesso }}</small></p>
-        <ul>
-            {% for item in dados.itens %}
-                <li>{{ item.quantidade }}x {{ item.nome }} - R$ {{ item.preco_unitario }} (Total: R$ {{ item.preco_total }})</li>
-            {% empty %}
-                <li>Nenhum item encontrado. (Pode ser que a estrutura do HTML seja diferente ou fomos bloqueados).</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-
 {% endblock %}
