@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.utils.timezone import make_aware
 from .scraper import extrair_dados_nfce
 from .models import Establishment, Product, Receipt, ReceiptItem
+from .leitor_email import processar_emails
 
 @login_required
 def home(request):
@@ -72,3 +73,11 @@ def ler_nota(request):
 
     # Requisição GET retorna apenas o HTML
     return render(request, 'expenses/ler_nota.html')
+
+@login_required
+def sincronizar_email(request):
+    try:
+        total = processar_emails()
+        return JsonResponse({'sucesso': True, 'mensagem': f'Sincronização concluída! {total} novas notas.'})
+    except Exception as e:
+        return JsonResponse({'sucesso': False, 'mensagem': f'Erro: {str(e)}'})

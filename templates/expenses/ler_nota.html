@@ -3,6 +3,26 @@
 {% block content %}
     <h2>Ler Nota Fiscal</h2>
 
+    <button id="btn-sync" onclick="sincronizarEmail()" style="background: #28a745; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px;">
+        🔄 Sincronizar E-mail Agora
+    </button>
+
+    <script>
+    function sincronizarEmail() {
+        const btn = document.getElementById('btn-sync');
+        btn.innerText = "⏳ Sincronizando...";
+        btn.disabled = true;
+
+        fetch("{% url 'sincronizar_email' %}")
+            .then(res => res.json())
+            .then(data => {
+                alert(data.mensagem);
+                btn.innerText = "🔄 Sincronizar E-mail Agora";
+                btn.disabled = false;
+            });
+    }
+    </script>
+
     <div id="scanner-container">
         <div id="reader" style="width: 100%; max-width: 500px;"></div>
     </div>

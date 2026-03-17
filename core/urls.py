@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include, reverse_lazy
 from django.views.generic import CreateView
-from expenses.views import home, ler_nota
+from expenses.views import home, ler_nota, sincronizar_email
 from accounts.forms import CustomUserCreationForm
 from django.views.generic import TemplateView
 
@@ -36,4 +36,5 @@ urlpatterns = [
     path('ler-nota/', ler_nota, name='ler_nota'),
     path('sw.js', TemplateView.as_view(template_name='sw.js', content_type='application/javascript')),
     path('manifest.json', TemplateView.as_view(template_name='manifest.json', content_type='application/json')),
+    path('sincronizar-email/', sincronizar_email, name='sincronizar_email'),
 ]
