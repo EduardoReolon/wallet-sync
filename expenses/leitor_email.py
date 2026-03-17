@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from django.utils.timezone import make_aware, is_aware
 from dotenv import load_dotenv
+import email.utils
 
 # 1. Configuração de Caminhos e Django
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,7 +72,19 @@ def salvar_xml_no_banco(xml_content, user):
         for det in root.findall('.//ns:det', ns):
             prod_xml = det.find('ns:prod', ns)
             nome_item = prod_xml.find('ns:xProd', ns).text
-            produto, _ = Product.objects.get_or_create(name=nome_item)
+            
+            # Busca o EAN (Código de barras)
+            ean_xml = prod_xml.find('ns:cEAN', ns)
+            ean_val = ean_xml.text if ean_xml is not None else ""
+
+            # Lógica Híbrida: Se tem EAN válido, busca/cria por ele. Se não, vai pelo nome.
+            if ean_val and ean_val.upper() != "SEM GTIN":
+                produto, _ = Product.objects.get_or_create(
+                    barcode=ean_val, 
+                    defaults={'name': nome_item} # Salva o nome só se estiver criando agora
+                )
+            else:
+                produto, _ = Product.objects.get_or_create(name=nome_item)
             
             ReceiptItem.objects.create(
                 receipt=nota, 
@@ -85,18 +98,10 @@ def salvar_xml_no_banco(xml_content, user):
         return f"Erro ao processar XML: {e}"
 
 def processar_emails():
-    # Agora pegamos o primeiro usuário do seu CustomUser ordenado por ID
-    usuario = User.objects.order_by('id').first()
-    
-    if not usuario:
-        print("Erro: Nenhum usuário cadastrado no sistema.")
-        return
-
-    print(f"Iniciando varredura para o usuário: {usuario.email}")
+    print("Iniciando varredura de e-mails...")
 
     pastas = ['INBOX', '"[Gmail]/Spam"']
     mail = imaplib.IMAP4_SSL(SERVIDOR_IMAP)
-
     notas_importadas = 0
     
     try:
@@ -111,16 +116,35 @@ def processar_emails():
                 _, msg_dados = mail.fetch(id_email, '(RFC822)')
                 msg = email.message_from_bytes(msg_dados[0][1])
                 
+                # 1. Extrai o e-mail real do remetente (ex: tira de "Nome <email@dominio.com>")
+                remetente_bruto = msg.get('From')
+                _, email_remetente = email.utils.parseaddr(remetente_bruto)
+                
+                # 2. Busca o usuário pelo e-mail
+                usuario = User.objects.filter(email=email_remetente).first()
+                
+                # 3. Se não existir, pega ou cria a conta genérica
+                if not usuario:
+                    usuario, criado = User.objects.get_or_create(
+                        email='sistema@wallet-sync.local'
+                    )
+                    if criado:
+                        usuario.set_unusable_password() # Bloqueia login com senha
+                        usuario.save()
+                
+                # 4. Processa os anexos daquele e-mail
                 for part in msg.walk():
                     if part.get_filename() and part.get_filename().lower().endswith('.xml'):
                         xml_data = part.get_payload(decode=True)
                         resultado = salvar_xml_no_banco(xml_data, usuario)
+                        print(f"[{email_remetente}] {resultado}")
+                        
                         if "Sucesso" in resultado:
                             notas_importadas += 1
+                            
+        return notas_importadas
     finally:
         mail.logout()
-
-    return notas_importadas
 
 if __name__ == '__main__':
     processar_emails()

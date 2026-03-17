@@ -7,6 +7,13 @@
         🔄 Sincronizar E-mail Agora
     </button>
 
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; max-width: 500px;">
+        <input type="url" id="url-manual" placeholder="Ou cole o link da nota aqui..." style="flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <button onclick="enviarUrlManual()" style="background: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer;">
+            Enviar
+        </button>
+    </div>
+
     <script>
     function sincronizarEmail() {
         const btn = document.getElementById('btn-sync');
@@ -51,6 +58,18 @@
 
         let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} });
 
+        // NOVA FUNÇÃO: Pega o valor do input e dispara o fluxo normal
+        function enviarUrlManual() {
+            const inputUrl = document.getElementById('url-manual');
+            const url = inputUrl.value.trim();
+            if (url) {
+                onScanSuccess(url, null);
+                inputUrl.value = ''; // Limpa o campo após o envio
+            } else {
+                alert("Por favor, cole um link válido.");
+            }
+        }
+
         function exibirDados(dados) {
             document.getElementById('estab-nome').innerText = dados.estabelecimento;
             document.getElementById('estab-data').innerText = "Emitido em: " + (dados.data_emissao_str || "Desconhecido");
@@ -79,7 +98,12 @@
             resultadoEl.innerText = "Processando link na SEFAZ...";
             resultadoEl.style.color = "blue";
             
-            scanner.clear(); // Para a câmera
+            // Tenta parar a câmera, se ela estiver rodando
+            try {
+                scanner.clear(); 
+            } catch (e) {
+                console.log("Câmera já estava parada ou não iniciada.");
+            }
             
             fetch("{% url 'ler_nota' %}", { 
                 method: 'POST',
@@ -92,7 +116,7 @@
             .then(res => res.json())
             .then(data => {
                 resultadoEl.innerText = data.mensagem;
-                resultadoEl.style.color = data.sucesso ? "green" : "#ff8c00"; // Verde se sucesso, Laranja se já existir
+                resultadoEl.style.color = data.sucesso ? "green" : "#ff8c00"; 
                 
                 if (data.dados) {
                     exibirDados(data.dados);

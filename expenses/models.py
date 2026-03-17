@@ -12,6 +12,7 @@ class Establishment(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
+    barcode = models.CharField(max_length=50, null=True, blank=True)
     category = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:

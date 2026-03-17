@@ -32,10 +32,25 @@ def extrair_dados_nfce(url):
     for linha in linhas_produtos:
         try:
             nome = linha.find('span', class_='txtTit2').text.strip()
+
+            span_codigo = linha.find('span', class_='RCod')
+            codigo_barras = ""
+            if span_codigo:
+                cod_limpo = span_codigo.text.replace('(Código:', '').replace(')', '').strip()
+                # Ignora se for o padrão sem EAN
+                codigo_barras = cod_limpo if cod_limpo.upper() != "SEM GTIN" else ""
+
             qtd = linha.find('span', class_='Rqtd').text.replace('Qtde.:', '').strip().replace(',', '.')
             vl_unit = linha.find('span', class_='RvlUnit').text.replace('Vl. Unit.:', '').strip().replace(',', '.')
             vl_total = linha.find('span', class_='valor').text.strip().replace(',', '.')
-            itens.append({'nome': nome, 'quantidade': qtd, 'preco_unitario': vl_unit, 'preco_total': vl_total})
+
+            itens.append({
+                'nome': nome, 
+                'codigo': codigo_barras,
+                'quantidade': qtd, 
+                'preco_unitario': vl_unit, 
+                'preco_total': vl_total
+            })
         except AttributeError:
             continue
 

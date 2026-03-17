@@ -56,10 +56,24 @@ def ler_nota(request):
             )
             
             for item in dados['itens']:
-                produto, _ = Product.objects.get_or_create(name=item['nome'])
+                codigo_barras = item.get('codigo')
+                
+                # Se extraiu um código válido, busca ou cria usando ele
+                if codigo_barras:
+                    produto, _ = Product.objects.get_or_create(
+                        barcode=codigo_barras,
+                        defaults={'name': item['nome']}
+                    )
+                # Se não tem código, cai no comportamento antigo (busca pelo nome)
+                else:
+                    produto, _ = Product.objects.get_or_create(name=item['nome'])
+
                 ReceiptItem.objects.create(
-                    receipt=nota, product=produto, quantity=item['quantidade'],
-                    unit_price=item['preco_unitario'], total_price=item['preco_total']
+                    receipt=nota, 
+                    product=produto, 
+                    quantity=item['quantidade'],
+                    unit_price=item['preco_unitario'], 
+                    total_price=item['preco_total']
                 )
                 
             return JsonResponse({
