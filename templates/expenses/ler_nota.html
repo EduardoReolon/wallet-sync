@@ -48,6 +48,11 @@
         </button>
     </div>
 
+    <div style="margin-top: 20px;">
+        <label for="xml-upload"><strong>Ou envie o arquivo XML da nota:</strong></label><br>
+        <input type="file" id="xml-upload" accept=".xml" style="margin-top: 10px;">
+    </div>
+
     <script src="https://unpkg.com/html5-qrcode"></script>
     
     <script>
@@ -129,5 +134,46 @@
         }
 
         scanner.render(onScanSuccess);
+
+        document.getElementById('xml-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            const resElement = document.getElementById('resultado'); // Pega o texto da tela
+            
+            reader.onload = function(evt) {
+                const xmlContent = evt.target.result;
+                resElement.innerText = "Enviando XML para o servidor...";
+                resElement.style.color = "blue"; // Dá um feedback visual de carregamento
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}' // Pega o token direto
+                    },
+                    body: JSON.stringify({ xml: xmlContent })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.sucesso) {
+                        resElement.style.color = "green";
+                    } else {
+                        resElement.style.color = "red";
+                    }
+                    resElement.innerText = "Resposta: " + data.mensagem;
+                })
+                .catch(err => {
+                    resElement.style.color = "red";
+                    resElement.innerText = "Erro ao se comunicar com o servidor.";
+                });
+            };
+            
+            reader.readAsText(file);
+            
+            // Limpa o input para você poder selecionar a mesma nota de novo se quiser
+            e.target.value = ''; 
+        });
     </script>
 {% endblock %}
