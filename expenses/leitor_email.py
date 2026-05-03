@@ -1,10 +1,13 @@
+import html
 import os
+import re
 import sys
 import django
 import imaplib
 import email
 from dotenv import load_dotenv
 import email.utils
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
@@ -16,6 +19,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 # Importa as mesmas regras de negócio usadas pela Web
 from expenses.utils import extrair_dados_xml, salvar_nota_banco
+from .scraper import extrair_dados_nfce
 
 User = get_user_model()
 EMAIL_USER = os.getenv('EMAIL')
@@ -53,19 +57,39 @@ def processar_emails():
                         usuario.set_unusable_password()
                         usuario.save()
                 
+                dados = None # Inicializa os dados da nota
+                
                 for part in msg.walk():
+                    # 1. TENTA PRIMEIRO POR ANEXO XML
                     if part.get_filename() and part.get_filename().lower().endswith('.xml'):
                         xml_data = part.get_payload(decode=True)
-                        
-                        # Processamento padronizado
                         dados = extrair_dados_xml(xml_data)
                         if dados:
-                            sucesso, mensagem = salvar_nota_banco(dados, usuario)
-                            print(f"[{email_remetente}] {mensagem}")
-                            if sucesso:
-                                notas_importadas += 1
-                        else:
-                            print(f"[{email_remetente}] Erro: XML em formato não reconhecido.")
+                            break # Achou e extraiu, sai da busca no e-mail
+                            
+                    # 2. SE NÃO TEM XML, PROCURA NO CORPO HTML PELA URL
+                    elif part.get_content_type() == "text/html":
+                        html_content = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                        
+                        # Expressão regular para pegar link padrão Sefaz (.gov.br contendo 'nfce')
+                        match_url = re.search(r'(https?://[^\s"\'<>]+?\.gov\.br/[^\s"\'<>]*?nfce[^\s"\'<>]*?)', html_content, re.IGNORECASE)
+                        
+                        if match_url:
+                            url_suja = match_url.group(1)
+                            # html.unescape limpa coisas como &amp; que o Outlook/Gmail inserem
+                            url_limpa = html.unescape(url_suja)
+                            dados = extrair_dados_nfce(url_limpa)
+                            if dados:
+                                break # Achou e extraiu, sai da busca no e-mail
+
+                # Processamento padronizado final (após o término do for walk)
+                if dados:
+                    sucesso, mensagem = salvar_nota_banco(dados, usuario)
+                    print(f"[{email_remetente}] {mensagem}")
+                    if sucesso:
+                        notas_importadas += 1
+                else:
+                    print(f"[{email_remetente}] Erro: Nem XML nem URL válidos encontrados.")
                             
         return notas_importadas
     finally:

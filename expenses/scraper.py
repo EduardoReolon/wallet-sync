@@ -28,6 +28,7 @@ def extrair_dados_nfce(url):
 
     # Itens
     itens = []
+    total_nf = 0.0
     linhas_produtos = soup.find_all('tr', id=lambda x: x and x.startswith('Item +'))
     for linha in linhas_produtos:
         try:
@@ -37,16 +38,26 @@ def extrair_dados_nfce(url):
             codigo_barras = ""
             if span_codigo:
                 cod_limpo = span_codigo.text.replace('(Código:', '').replace(')', '').strip()
-                # Ignora se for o padrão sem EAN
                 codigo_barras = cod_limpo if cod_limpo.upper() != "SEM GTIN" else ""
 
-            qtd = linha.find('span', class_='Rqtd').text.replace('Qtde.:', '').strip().replace(',', '.')
-            vl_unit = linha.find('span', class_='RvlUnit').text.replace('Vl. Unit.:', '').strip().replace(',', '.')
-            vl_total = linha.find('span', class_='valor').text.strip().replace(',', '.')
+            # Captura as strings
+            qtd_str = linha.find('span', class_='Rqtd').text.replace('Qtde.:', '').strip().replace(',', '.')
+            vl_unit_str = linha.find('span', class_='RvlUnit').text.replace('Vl. Unit.:', '').strip().replace(',', '.')
+            vl_total_str = linha.find('span', class_='valor').text.strip().replace(',', '.')
+
+            # Converte para float (com fallback seguro caso venha algo estranho no HTML)
+            try:
+                qtd = float(qtd_str)
+                vl_unit = float(vl_unit_str)
+                vl_total = float(vl_total_str)
+            except ValueError:
+                qtd, vl_unit, vl_total = 1.0, 0.0, 0.0
+
+            total_nf += vl_total
 
             itens.append({
-                'nome': nome, 
                 'codigo': codigo_barras,
+                'nome': nome, 
                 'quantidade': qtd, 
                 'preco_unitario': vl_unit, 
                 'preco_total': vl_total
@@ -55,10 +66,12 @@ def extrair_dados_nfce(url):
             continue
 
     return {
+        'chave_acesso': chave_acesso,
+        'cancelada': False,
         'estabelecimento': nome_estabelecimento,
         'cnpj': cnpj,
         'endereco': endereco,
-        'chave_acesso': chave_acesso,
         'data_emissao': data_emissao,
+        'total_nota': total_nf,
         'itens': itens
     }
