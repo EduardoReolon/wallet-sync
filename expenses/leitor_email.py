@@ -72,7 +72,7 @@ def processar_emails():
                         html_content = part.get_payload(decode=True).decode('utf-8', errors='ignore')
                         
                         # Expressão regular para pegar link padrão Sefaz (.gov.br contendo 'nfce')
-                        match_url = re.search(r'(https?://[^\s"\'<>]+?\.gov\.br/[^\s"\'<>]*?nfce[^\s"\'<>]*?)', html_content, re.IGNORECASE)
+                        match_url = re.search(r'(https?://[^\s"\'<>]*?\.gov\.br/[^\s"\'<>]*?nfce[^\s"\'<>]*)', html_content, re.IGNORECASE)
                         
                         if match_url:
                             url_suja = match_url.group(1)

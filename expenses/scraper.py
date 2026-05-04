@@ -65,6 +65,15 @@ def extrair_dados_nfce(url):
         except AttributeError:
             continue
 
+    span_total = soup.find('span', class_='totalNumb txtMax')
+    if span_total:
+        try:
+            # Pega o texto, remove eventuais pontos de milhar e troca vírgula por ponto
+            texto_valor = span_total.text.strip().replace('.', '').replace(',', '.')
+            total_nf = float(texto_valor)
+        except ValueError:
+            pass
+
     return {
         'chave_acesso': chave_acesso,
         'cancelada': False,
