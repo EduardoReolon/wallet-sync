@@ -9,5 +9,15 @@
         <button type="submit" style="width: 100%; padding: 10px; cursor: pointer;">Acessar</button>
     </form>
     <a href="{% url 'register' %}">Criar Conta</a>
+
+    <script>
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            const urlAtualDoServidor = window.location.origin; // Pega o subdomínio dinamicamente
+            
+            chrome.storage.local.set({ 'servidor_wallet-sync': urlAtualDoServidor }, () => {
+            console.log('Wallet Sync configurado para:', urlAtualDoServidor);
+            });
+        }
+    </script>
 </body>
 </html>

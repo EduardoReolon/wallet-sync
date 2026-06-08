@@ -30,12 +30,32 @@ DEBUG = ENVIRONMENT == 'DEV'
 
 if ENVIRONMENT == 'PROD':
     ALLOWED_HOSTS = ['wallet.sigmaiaconsultoria.com.br']
+    SESSION_COOKIE_SAMESITE = 'None'
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = 'None'
+    CSRF_COOKIE_SECURE = True
 else:
     ALLOWED_HOSTS = ['*']
 
 # Configurações de CSRF para HTTPS e o domínio
 CSRF_TRUSTED_ORIGINS = [
     'https://wallet.sigmaiaconsultoria.com.br',
+]
+
+# Permite que o Django envie respostas para origens externas e aceite os cookies
+CORS_ALLOW_CREDENTIALS = True
+
+# Lista de origens permitidas a fazer requisições para o seu sistema
+CORS_ALLOWED_ORIGINS = [
+    "https://notaparana.pr.gov.br",
+    "https://www.notaparana.pr.gov.br",
+]
+
+# IMPORTANTE: Extensões do Chrome possuem uma origem própria baseada no ID dela.
+# Quando você instalar sua extensão, ela terá um ID (ex: abcdefghijklmnopqrstuvwxyz).
+# Você DEVE adicionar a origem da extensão aqui também:
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^chrome-extension://[a-p]{32}$", # Isso cobre qualquer extensão do Chrome
 ]
 
 BASE_DIR = Path(__file__).resolve().parent.parent

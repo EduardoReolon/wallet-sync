@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils.timezone import make_aware, is_aware
-from .scraper import extrair_dados_nfce
+from .scraper import extrair_dados_nfe
 from .models import Establishment, Product, Receipt, ReceiptItem
 from .leitor_email import processar_emails
 from django.views.decorators.csrf import csrf_exempt
@@ -40,7 +40,7 @@ def ler_nota(request):
             dados = None
             
             if url:
-                dados = extrair_dados_nfce(url) 
+                dados = extrair_dados_nfe(url) 
             elif xml_content:
                 dados = extrair_dados_xml(xml_content)
 
@@ -62,6 +62,68 @@ def ler_nota(request):
             return JsonResponse({'sucesso': False, 'mensagem': f'Erro no servidor: {str(e)}'})
 
     return render(request, 'expenses/ler_nota.html')
+
+@csrf_exempt
+@login_required
+def ler_notas_lote(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Prepara uma lista única de itens para processar, unificando os dois mundos
+            itens_para_processar = []
+            
+            # 1. Pega o formato NOVO do plugin (Array de objetos com {url, html})
+            if 'notas' in data:
+                itens_para_processar.extend(data['notas'])
+                
+            # 2. Pega o formato ANTIGO (Array de strings de URLs, caso ainda seja usado aqui)
+            if 'urls' in data:
+                for u in data['urls']:
+                    itens_para_processar.append({'url': u, 'html': None})
+            
+            cont_sucesso = 0
+            cont_erro = 0
+            detalhes_erros = []
+
+            for item in itens_para_processar:
+                # Extrai do dicionário, suportando ambos os casos
+                url_atual = item.get('url')
+                html_atual = item.get('html')
+                
+                try:
+                    # Passamos os dois parâmetros. A função sabe o que fazer!
+                    dados = extrair_dados_nfe(url=url_atual, html_content=html_atual)
+                    
+                    if not dados or not dados.get('chave_acesso'):
+                        cont_erro += 1
+                        detalhes_erros.append(f"Chave não encontrada na URL: {url_atual}")
+                        continue
+
+                    # Utiliza a sua lógica atual de salvamento
+                    sucesso, mensagem = salvar_nota_banco(dados, request.user)
+                    
+                    if sucesso:
+                        cont_sucesso += 1
+                    else:
+                        cont_erro += 1
+                        detalhes_erros.append(f"Erro ao salvar ({url_atual}): {mensagem}")
+
+                except Exception as e_item:
+                    cont_erro += 1
+                    detalhes_erros.append(f"Falha ao processar ({url_atual}): {str(e_item)}")
+
+            return JsonResponse({
+                'sucesso': True,
+                'sucessos': cont_sucesso,
+                'erros': cont_erro,
+                'detalhes_erros': detalhes_erros
+            })
+
+        except Exception as e:
+            return JsonResponse({'sucesso': False, 'mensagem': f'Erro crítico no servidor: {str(e)}'}, status=500)
+
+    return JsonResponse({'erro': 'Método não permitido'}, status=405)
 
 @csrf_exempt
 def ler_nota_iphone(request):
@@ -88,7 +150,7 @@ def ler_nota_iphone(request):
                 vinculado_usuario = False
 
             # 1. Extrai os dados
-            dados = extrair_dados_nfce(url_nota)
+            dados = extrair_dados_nfe(url_nota)
 
             # 2. Verifica duplicidade
             chave = dados.get('chave_acesso')

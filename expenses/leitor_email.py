@@ -19,7 +19,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 # Importa as mesmas regras de negócio usadas pela Web
 from expenses.utils import extrair_dados_xml, salvar_nota_banco
-from .scraper import extrair_dados_nfce
+from .scraper import extrair_dados_nfe
 
 User = get_user_model()
 EMAIL_USER = os.getenv('EMAIL')
@@ -78,7 +78,7 @@ def processar_emails():
                             url_suja = match_url.group(1)
                             # html.unescape limpa coisas como &amp; que o Outlook/Gmail inserem
                             url_limpa = html.unescape(url_suja)
-                            dados = extrair_dados_nfce(url_limpa)
+                            dados = extrair_dados_nfe(url_limpa)
                             if dados:
                                 break # Achou e extraiu, sai da busca no e-mail
 
