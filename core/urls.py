@@ -34,7 +34,7 @@ urlpatterns = [
 
     path('', home, name='home'),
     path('ler-nota/', ler_nota, name='ler_nota'),
-    path('ler-notas-lote/', ler_notas_lote, name='ler_nota'),
+    path('ler-notas-lote/', ler_notas_lote, name='ler_notas_lote'),
     path('api/ler-nota-iphone/', ler_nota_iphone, name='ler_nota_iphone'),
     path('sw.js', TemplateView.as_view(template_name='sw.js', content_type='application/javascript')),
     path('manifest.json', TemplateView.as_view(template_name='manifest.json', content_type='application/json')),

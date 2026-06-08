@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html>
-<head><title>Login</title></head>
+
+<head>
+    <title>Login</title>
+</head>
+
 <body style="font-family: sans-serif; max-width: 300px; margin: 50px auto;">
     <h2>Entrar</h2>
     <form method="post">
@@ -11,13 +15,17 @@
     <a href="{% url 'register' %}">Criar Conta</a>
 
     <script>
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            const urlAtualDoServidor = window.location.origin; // Pega o subdomínio dinamicamente
-            
-            chrome.storage.local.set({ 'servidor_wallet-sync': urlAtualDoServidor }, () => {
-            console.log('Wallet Sync configurado para:', urlAtualDoServidor);
-            });
-        }
+        // Script na sua página web (Django)
+        const urlAtualDoServidor = window.location.origin;
+
+        // Dispara uma mensagem genérica na janela
+        window.postMessage({
+            type: "CONFIGURAR_WALLET_SYNC",
+            url: urlAtualDoServidor
+        }, "*");
+
+        console.log("Mensagem de configuração enviada pela página.");
     </script>
 </body>
+
 </html>
