@@ -94,7 +94,7 @@ def ler_notas_lote(request):
                 try:
                     # Passamos os dois parâmetros. A função sabe o que fazer!
                     dados = extrair_dados_nfe(url=url_atual, html_content=html_atual)
-                    
+
                     if not dados or not dados.get('chave_acesso'):
                         cont_erro += 1
                         detalhes_erros.append(f"Chave não encontrada na URL: {url_atual}")

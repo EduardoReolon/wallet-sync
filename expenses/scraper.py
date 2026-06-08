@@ -137,6 +137,35 @@ def extrair_nfce(soup):
     chave_acesso = soup.find('span', class_='chave').text.replace(' ', '').strip() if soup.find('span', class_='chave') else ""
     
     data_emissao = None
+    
+    # NOVA LÓGICA DE DATA: Busca exata pelo irmão do <strong>
+    strong_emissao = soup.find('strong', text=re.compile(r'Emissão:\s*', re.IGNORECASE))
+    
+    if strong_emissao:
+        # Pega o texto que vem logo depois da tag <strong> (que é o text node contendo a data)
+        # O .next_sibling pega o texto cru " \n 07/06/2026 17:37:08  - Via Consumidor \n"
+        texto_apos_emissao = strong_emissao.next_sibling
+        
+        if texto_apos_emissao:
+            texto_limpo = texto_apos_emissao.strip()
+            
+            # Agora extraímos só o padrão de data e hora do início da string limpa
+            match_data = re.search(r'(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2}:\d{2})', texto_limpo)
+            if match_data:
+                data_str = f"{match_data.group(1)} {match_data.group(2)}"
+                data_emissao = datetime.strptime(data_str, "%d/%m/%Y %H:%M:%S")
+
+    # Fallback (Plano B) caso o DOM mude completamente
+    if not data_emissao:
+        texto_geral = soup.get_text()
+        texto_geral_limpo = re.sub(r'\s+', ' ', texto_geral)
+        match_data = re.search(r'(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2}:\d{2})', texto_geral_limpo)
+        # O fallback pode pegar a "Data/Hora da Consulta" lá do rodapé se não achar a emissão,
+        # mas é melhor que dar Null constraint no banco.
+        if match_data:
+            data_str = f"{match_data.group(1)} {match_data.group(2)}"
+            data_emissao = datetime.strptime(data_str, "%d/%m/%Y %H:%M:%S")
+
     texto_geral = soup.get_text()
     match_data = re.search(r'Emissão:\s*(\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2})', texto_geral)
     if match_data:

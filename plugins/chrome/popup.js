@@ -63,12 +63,28 @@ document.getElementById('capturar').addEventListener('click', async () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include', 
-          // Agora enviamos a lista de objetos contendo { url, html }
           body: JSON.stringify({ notas: payloadNotas }) 
         });
 
         const resultado = await response.json();
-        alert(`Sincronização concluída!\nSucessos: ${resultado.sucessos}\nErros: ${resultado.erros}`);
+
+        // Verifica se o backend retornou sucesso geral ou erro crítico
+        if (resultado.sucesso) {
+          let mensagemFinal = `Sincronização concluída!\nSucessos: ${resultado.sucessos}\nErros: ${resultado.erros}`;
+          
+          // Se houveram erros na extração/salvamento, adiciona os detalhes na mensagem
+          if (resultado.erros > 0 && resultado.detalhes_erros && resultado.detalhes_erros.length > 0) {
+            // Pega os erros, junta com uma quebra de linha e um tracinho
+            const listaErros = resultado.detalhes_erros.map(e => `- ${e}`).join('\n');
+            mensagemFinal += `\n\nDetalhes dos Erros:\n${listaErros}`;
+          }
+
+          alert(mensagemFinal);
+        } else {
+          // Caiu no "except Exception as e" do Django (status 500)
+          alert(`Erro no servidor: ${resultado.mensagem}`);
+        }
+
       } catch (err) {
         alert(`Erro de conexão com o servidor: ${err.message}`);
       }
