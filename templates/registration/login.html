@@ -15,16 +15,13 @@
     <a href="{% url 'register' %}">Criar Conta</a>
 
     <script>
-        // Script na sua página web (Django)
-        const urlAtualDoServidor = window.location.origin;
-
-        // Dispara uma mensagem genérica na janela
-        window.postMessage({
-            type: "CONFIGURAR_WALLET_SYNC",
-            url: urlAtualDoServidor
-        }, "*");
-
-        console.log("Mensagem de configuração enviada pela página.");
+        setTimeout(() => {
+            window.postMessage({
+                type: "CONFIGURAR_WALLET_SYNC",
+                url: window.location.origin
+            }, "*");
+            console.log("Mensagem de configuração disparada com atraso.");
+        }, 1500);
     </script>
 </body>
 

@@ -11,6 +11,7 @@ if (tabelaNotas) {
   chrome.storage.local.set({ 'pagina_valida': false });
 }
 
+console.log('fadsfasdf')
 window.addEventListener("message", (event) => {
     // Verifica se a mensagem tem a mesma origem (segurança)
     if (event.source !== window) return;
