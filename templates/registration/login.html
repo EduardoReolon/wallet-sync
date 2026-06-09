@@ -13,16 +13,6 @@
         <button type="submit" style="width: 100%; padding: 10px; cursor: pointer;">Acessar</button>
     </form>
     <a href="{% url 'register' %}">Criar Conta</a>
-
-    <script>
-        setTimeout(() => {
-            window.postMessage({
-                type: "CONFIGURAR_WALLET_SYNC",
-                url: window.location.origin
-            }, "*");
-            console.log("Mensagem de configuração disparada com atraso.");
-        }, 1500);
-    </script>
 </body>
 
 </html>

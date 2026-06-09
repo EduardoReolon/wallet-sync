@@ -14,6 +14,12 @@
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register("/sw.js");
       }
+      setTimeout(() => {
+          window.postMessage({
+              type: "CONFIGURAR_WALLET_SYNC",
+              url: window.location.origin
+          }, "*");
+      }, 1500);
     </script>
 </head>
 <body style="font-family: sans-serif; padding: 20px;">

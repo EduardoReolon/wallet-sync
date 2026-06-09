@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-5=*vtz5hx==s#o3mjfu8se@i56*n=rq2f_414334-nklkt+vjd
 DEBUG = ENVIRONMENT == 'DEV'
 
 if ENVIRONMENT == 'PROD':
-    ALLOWED_HOSTS = ['wallet.sigmaiaconsultoria.com.br']
+    ALLOWED_HOSTS = ['wallet.ekron.ia.br']
     SESSION_COOKIE_SAMESITE = 'None'
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SAMESITE = 'None'
@@ -39,7 +39,7 @@ else:
 
 # Configurações de CSRF para HTTPS e o domínio
 CSRF_TRUSTED_ORIGINS = [
-    'https://wallet.sigmaiaconsultoria.com.br',
+    'https://wallet.ekron.ia.br',
 ]
 
 # Permite que o Django envie respostas para origens externas e aceite os cookies
