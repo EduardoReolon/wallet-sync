@@ -31,29 +31,33 @@ def extrair_nfe(soup):
     
     # Função utilitária para buscar um span logo após um label específico
     def buscar_por_label(texto_label, elemento_pai=soup):
-        label = elemento_pai.find(lambda tag: tag.name == 'label' and texto_label in tag.text)
+        # A busca usa o "in", então procurar por "Raz" vai encontrar "Razão" ou "RazÃ£o"
+        label = elemento_pai.find(lambda tag: tag.name == 'label' and tag.text and texto_label in tag.text)
         if label:
             span = label.find_next_sibling('span')
             if span:
                 return span.text.strip()
         return None
 
-    # Chave de Acesso
+    # Chave de Acesso (Sem acento, mantemos igual)
     chave_acesso = buscar_por_label('Chave de Acesso')
     if chave_acesso:
         chave_acesso = chave_acesso.replace(' ', '')
         
     # Dados do Emitente
     div_emitente = soup.find('div', id='Emitente')
-    nome_estabelecimento = buscar_por_label('Nome / Razão Social', div_emitente) if div_emitente else "Desconhecido"
+    
+    # BUSCA SEM ACENTOS ("Razão" -> "Raz", "Endereço" -> "Endere")
+    nome_estabelecimento = buscar_por_label('Nome / Raz', div_emitente) if div_emitente else None
+    if not nome_estabelecimento:
+        nome_estabelecimento = buscar_por_label('Nome', div_emitente) if div_emitente else "Desconhecido"
+        
     cnpj = buscar_por_label('CNPJ', div_emitente) if div_emitente else None
+    endereco = buscar_por_label('Endere', div_emitente) if div_emitente else None
     
-    # Endereço (concatenando rua, bairro, etc, se necessário)
-    endereco = buscar_por_label('Endereço', div_emitente) if div_emitente else None
-    
-    # Data de Emissão
+    # Data de Emissão ("Emissão" -> "Emiss")
     data_emissao = None
-    data_str = buscar_por_label('Data de Emissão')
+    data_str = buscar_por_label('Data de Emiss')
     if data_str:
         # Ex: '26/05/2026 10:10:42-03:00' -> remove o fuso horário para o datetime padrão
         data_limpa = data_str.split('-')[0].strip()
@@ -70,12 +74,11 @@ def extrair_nfe(soup):
         if texto_total:
             total_nf = float(texto_total.replace('.', '').replace(',', '.'))
 
-    # Itens (Produtos)
+    # Itens (Produtos) - A busca dos produtos já usava as classes do CSS, então não sofre com acentos
     itens = []
     div_prod = soup.find('div', id='Prod')
     
     if div_prod:
-        # As linhas de produtos alternam entre a tabela de resumo (toggle) e os detalhes (toggable)
         tabelas_resumo = div_prod.find_all('table', class_='toggle box')
         tabelas_detalhe = div_prod.find_all('table', class_='toggable box')
         
@@ -90,15 +93,14 @@ def extrair_nfe(soup):
                 td_valor = resumo.find('td', class_='fixo-prod-serv-vb')
                 vl_total_str = td_valor.find('span').text.strip().replace('.', '').replace(',', '.') if td_valor else "0.0"
                 
-                # O preço unitário real fica na tabela de detalhes
-                vl_unit_str = buscar_por_label('Valor unitário de comercialização', detalhe)
+                # "comercialização" tem cedilha e til. Vamos buscar por "comercializa"
+                vl_unit_str = buscar_por_label('comercializa', detalhe)
                 if not vl_unit_str:
                     vl_unit_str = "0.0"
                 else:
                     vl_unit_str = vl_unit_str.replace('.', '').replace(',', '.')
                 
-                # Código de barras (EAN/GTIN)
-                codigo_barras = buscar_por_label('Código EAN Comercial', detalhe)
+                codigo_barras = buscar_por_label('EAN', detalhe)
                 if codigo_barras and codigo_barras.upper() == "SEM GTIN":
                     codigo_barras = ""
 
@@ -114,7 +116,7 @@ def extrair_nfe(soup):
 
     return {
         'chave_acesso': chave_acesso,
-        'cancelada': False,  # Opcional: buscar por "CANCELADA" no HTML
+        'cancelada': False,
         'estabelecimento': nome_estabelecimento,
         'cnpj': cnpj,
         'endereco': endereco,

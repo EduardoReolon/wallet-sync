@@ -1,3 +1,53 @@
+function mostrarLogNaAba(tabId, mensagem, tipo = 'info') {
+  chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    args: [mensagem, tipo], // Passa as variáveis para dentro da página
+    func: (msg, tp) => {
+      let container = document.getElementById('carteira-log-flutuante');
+
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'carteira-log-flutuante';
+        container.style.cssText = `
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          width: 350px;
+          max-height: 300px;
+          background-color: rgba(15, 23, 42, 0.95);
+          color: #f8fafc;
+          font-family: monospace;
+          font-size: 13px;
+          padding: 15px;
+          border-radius: 8px;
+          border: 1px solid #334155;
+          z-index: 2147483647;
+          overflow-y: auto;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        `;
+        document.body.appendChild(container);
+      }
+
+      const linha = document.createElement('div');
+      linha.style.marginBottom = '6px';
+      linha.style.borderBottom = '1px dashed #334155';
+      linha.style.paddingBottom = '4px';
+
+      if (tp === 'erro') {
+        linha.style.color = '#ef4444'; // Vermelho
+      } else if (tp === 'sucesso') {
+        linha.style.color = '#22c55e'; // Verde
+      } else {
+        linha.style.color = '#eab308'; // Amarelo
+      }
+
+      linha.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      container.appendChild(linha);
+      container.scrollTop = container.scrollHeight;
+    }
+  });
+}
+
 document.getElementById('capturar').addEventListener('click', async () => {
   chrome.storage.local.get(['servidor_wallet-sync', 'pagina_valida'], async (result) => {
     const servidor = result['servidor_wallet-sync'];
@@ -68,25 +118,25 @@ document.getElementById('capturar').addEventListener('click', async () => {
 
         const resultado = await response.json();
 
-        // Verifica se o backend retornou sucesso geral ou erro crítico
         if (resultado.sucesso) {
-          let mensagemFinal = `Sincronização concluída!\nSucessos: ${resultado.sucessos}\nErros: ${resultado.erros}`;
+          let mensagemFinal = `Sincronização concluída!\nSucessos: ${resultado.sucessos} | Erros: ${resultado.erros}`;
           
-          // Se houveram erros na extração/salvamento, adiciona os detalhes na mensagem
           if (resultado.erros > 0 && resultado.detalhes_erros && resultado.detalhes_erros.length > 0) {
-            // Pega os erros, junta com uma quebra de linha e um tracinho
             const listaErros = resultado.detalhes_erros.map(e => `- ${e}`).join('\n');
-            mensagemFinal += `\n\nDetalhes dos Erros:\n${listaErros}`;
+            mensagemFinal += `\n\nDetalhes:\n${listaErros}`;
+            
+            // Passando o tab.id aqui!
+            mostrarLogNaAba(tab.id, mensagemFinal, 'info'); 
+          } else {
+            mostrarLogNaAba(tab.id, mensagemFinal, 'sucesso');
           }
 
-          alert(mensagemFinal);
         } else {
-          // Caiu no "except Exception as e" do Django (status 500)
-          alert(`Erro no servidor: ${resultado.mensagem}`);
+          mostrarLogNaAba(tab.id, `Erro no servidor: ${resultado.mensagem}`, 'erro');
         }
 
       } catch (err) {
-        alert(`Erro de conexão com o servidor: ${err.message}`);
+        mostrarLogNaAba(tab.id, `Erro de conexão: ${err.message}`, 'erro');
       }
     });
   });
